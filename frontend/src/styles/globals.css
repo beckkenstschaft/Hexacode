@@ -1,0 +1,165 @@
+/** Global styles */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-primary: #3253DC;
+    --color-primary-hover: #2843B8;
+    --color-primary-light: #E8ECFA;
+    --color-navy: #0B1A4F;
+    --color-navy-light: #152A6B;
+  }
+
+  html {
+    @apply antialiased;
+  }
+
+  body {
+    @apply bg-gray-50 text-snapdragon-navy;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+
+  * {
+    @apply border-gray-200;
+  }
+
+  /* Focus styles for accessibility */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-snapdragon-blue ring-offset-2;
+  }
+
+  /* High contrast mode */
+  .high-contrast {
+    --color-primary: #1e3ac5;
+    --color-primary-hover: #1a2f9e;
+  }
+
+  .high-contrast body {
+    @apply bg-white text-black;
+  }
+
+  .high-contrast .bg-gray-50 {
+    @apply bg-white;
+  }
+
+  .high-contrast .bg-gray-100 {
+    @apply bg-white;
+  }
+
+  .high-contrast .text-gray-500,
+  .high-contrast .text-gray-600 {
+    @apply text-gray-700;
+  }
+
+  .high-contrast .border-gray-200 {
+    @apply border-gray-400;
+  }
+
+  .high-contrast .border-gray-300 {
+    @apply border-gray-500;
+  }
+
+  /* Dark mode */
+  .dark {
+    @apply bg-gray-900 text-gray-100;
+  }
+
+  .dark body {
+    @apply bg-gray-900 text-gray-100;
+  }
+
+  .dark .bg-white {
+    @apply bg-gray-800;
+  }
+
+  .dark .bg-gray-50 {
+    @apply bg-gray-800;
+  }
+
+  .dark .bg-gray-100 {
+    @apply bg-gray-700;
+  }
+
+  .dark .text-snapdragon-navy {
+    @apply text-gray-100;
+  }
+
+  .dark .text-gray-500 {
+    @apply text-gray-400;
+  }
+
+  .dark .text-gray-600 {
+    @apply text-gray-300;
+  }
+
+  .dark .text-gray-700 {
+    @apply text-gray-200;
+  }
+
+  .dark .border-gray-200 {
+    @apply border-gray-700;
+  }
+
+  .dark .border-gray-300 {
+    @apply border-gray-600;
+  }
+
+  .dark .hover\:bg-gray-50:hover {
+    @apply hover:bg-gray-700;
+  }
+
+  .dark .hover\:bg-gray-100:hover {
+    @apply hover:bg-gray-700;
+  }
+}
+
+@layer components {
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    @apply w-2 h-2;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-gray-300 rounded-full hover:bg-gray-400;
+  }
+
+  .dark ::-webkit-scrollbar-thumb {
+    @apply bg-gray-600 hover:bg-gray-500;
+  }
+
+  /* Animation for live caption pulse */
+  @keyframes pulse-subtle {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.7;
+    }
+  }
+
+  .animate-pulse-subtle {
+    animation: pulse-subtle 2s ease-in-out infinite;
+  }
+}
+
+@layer utilities {
+  /* Text balance for better readability */
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* Prevent text selection on UI elements */
+  .select-none {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
+}

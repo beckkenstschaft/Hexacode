@@ -1,0 +1,64 @@
+# Dependabot configuration
+version: 2
+updates:
+  # Backend Python dependencies
+  - package-ecosystem: "pip"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "backend"
+    commit-message:
+      prefix: "deps(backend):"
+    groups:
+      dev-dependencies:
+        patterns:
+          - "pytest*"
+          - "ruff*"
+          - "mypy*"
+          - "pre-commit*"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # Frontend npm dependencies
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "frontend"
+    commit-message:
+      prefix: "deps(frontend):"
+    groups:
+      dev-dependencies:
+        patterns:
+          - "@types/*"
+          - "eslint*"
+          - "prettier*"
+          - "vitest*"
+          - "@testing-library/*"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    labels:
+      - "dependencies"
+      - "github-actions"
+    commit-message:
+      prefix: "deps(ci):"

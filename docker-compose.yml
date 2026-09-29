@@ -1,0 +1,45 @@
+# Docker Compose for development (CPU only)
+# Note: NPU access requires native Windows on ARM64
+# This compose file runs in CPU-only mode
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=development
+      - DEBUG=true
+      - DATABASE_URL=sqlite+aiosqlite:///./data/sahayak.db
+      - USE_MOCK_ENGINES=true
+      - LOG_LEVEL=INFO
+      - LOG_FORMAT=json
+      - CORS_ORIGINS=http://localhost:5173,http://frontend:80
+    volumes:
+      - ./backend/app:/app/app
+      - ./backend/data:/app/data
+      - ./backend/models:/app/models
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/api/v1/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5173:80"
+    environment:
+      - VITE_API_BASE=/api/v1
+      - VITE_WS_HOST=localhost:8000
+    depends_on:
+      - backend
+
+volumes:
+  backend_data:
+  backend_models:
