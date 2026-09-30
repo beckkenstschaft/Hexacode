@@ -1,251 +1,305 @@
-# Hexacode · Sahayak
+# Sahayak
 
-**Every lecture. Every language. On your laptop.**
+[![CI](https://github.com/your-org/Hexacode/workflows/CI/badge.svg)](https://github.com/your-org/Hexacode/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![React 18](https://img.shields.io/badge/react-18-blue.svg)](https://react.dev/)
 
-An offline, NPU-first meeting and classroom copilot for Snapdragon-powered HP PCs. It turns live speech in English, Hindi and Hinglish into captions and summaries, keeps all audio on the device, and includes a dashboard that measures what the Snapdragon NPU actually saves.
-
-> **Status: proposal submitted, baseline in development.**
-> This repository holds the project proposal and the code as it is built. Files are added step by step. The [Project Status](#project-status) table shows exactly what is done, so nothing here is claimed before it works.
-
-Submitted to the **Snapdragon AI Lab Build and Present Challenge** by **Syed Amaan Hasan** (M.Tech AI/ML, BITS Pilani).
-
----
-
-## Table of Contents
-
-1. [The Problem](#the-problem)
-2. [The Solution](#the-solution)
-3. [How Sahayak Differs from Windows Live Captions](#how-sahayak-differs-from-windows-live-captions)
-4. [Features](#features)
-5. [Architecture](#architecture)
-6. [NPU Advantage Dashboard](#npu-advantage-dashboard)
-7. [Tech Stack](#tech-stack)
-8. [Project Structure](#project-structure)
-9. [Getting Started](#getting-started)
-10. [Running on a Snapdragon PC](#running-on-a-snapdragon-pc)
-11. [Project Status](#project-status)
-12. [Roadmap](#roadmap)
-13. [Honesty Policy](#honesty-policy)
-14. [Documentation](#documentation)
-15. [Contributing](#contributing)
-16. [Author](#author)
-17. [License](#license)
-
----
+**Offline, NPU-first meeting and classroom copilot for Snapdragon-powered HP PCs — with a built-in "NPU Advantage" proof dashboard**
 
 ## The Problem
 
-**For users**
+Meetings and classrooms generate vast amounts of spoken content that's lost without manual note-taking. Existing solutions either:
+- Require cloud connectivity (privacy concerns, latency, cost)
+- Run slowly on CPU-only hardware
+- Don't prove where acceleration actually happens
 
-- Cloud note-taking tools need a stable internet connection, often a subscription, and permission to upload audio. This shuts out many students, clinics, small offices and government departments, especially where connectivity is weak.
-- Most tools handle Indian languages poorly, and code-mixed speech (Hindi and English in one sentence, called Hinglish) even worse.
+## Solution
 
-**For Snapdragon**
+Sahayak runs entirely offline on your Snapdragon-powered HP PC:
+- **Live captions** in English, Hindi, and Hinglish via WebSocket streaming
+- **Local summarization** with key points and action items
+- **NPU Advantage Dashboard** — honest benchmarks comparing NPU, GPU, and CPU on the *same audio* with real measurements stored in a database
 
-- Snapdragon X laptops offer a 45 TOPS NPU, but few everyday apps give a user a visible reason to care.
-- Developers find it hard to confirm that their app really runs on the NPU and not on the CPU, and to show what that saves in battery.
+## Key Features
 
-## The Solution
-
-Sahayak listens to any lecture, meeting or call and gives you live captions, summaries and action items. It runs on the Snapdragon NPU first, works with no internet, and never uploads your audio. A built-in dashboard shows measured proof of the speed and battery benefit.
-
-```mermaid
-flowchart LR
-    A[Speech in<br/>mic or system audio] --> B[Sahayak<br/>on-device, NPU-first]
-    B --> C[Live captions]
-    B --> D[Summaries and<br/>action items]
-    B --> E[NPU Advantage<br/>Dashboard]
-```
-
-## How Sahayak Differs from Windows Live Captions
-
-Windows already offers offline live captions on supported Snapdragon PCs. Sahayak does not try to replace it. It adds:
-
-| Sahayak adds | Why it matters |
-|---|---|
-| Hindi and Hinglish focus | Built and tested for the way many classrooms and offices actually speak |
-| Saved sessions and offline summaries | Notes and action items after every session, with no cloud |
-| Proof dashboard | A repeatable test showing which processor ran each stage and what it cost |
-| Meeting Q&A *(stretch goal)* | Ask questions about past sessions, on the device |
-
-## Features
-
-**Core (the baseline focus)**
-
-- Live English, Hindi and Hinglish captions from the microphone
-- Caption window with adjustable text size and a high-contrast theme
-- Saved sessions with timestamped transcripts
-- Local summaries: key points and action items
-- NPU Advantage Dashboard comparing NPU, CPU and GPU on the same audio
-
-**Stretch goals (only after the core is stable)**
-
-- Live translation between English, Hindi and other Indian languages
-- Ask-your-meeting Q&A over saved transcripts
-- Read-aloud of summaries for low-vision users
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Live captions (EN/HI/Hinglish) | ✅ Core | WebSocket streaming, VAD chunking |
+| Session persistence | ✅ Core | Transcripts with timestamps & language |
+| Extractive summarization | ✅ Core | Key points + action items |
+| GenAI summarization (ONNX Runtime GenAI) | 🔧 Stretch | Behind feature flag |
+| Translation | 🔧 Stretch | Not implemented |
+| Meeting Q&A | 🔧 Stretch | Not implemented |
+| Read-aloud (TTS) | 🔧 Stretch | Not implemented |
+| NPU Advantage Dashboard | ✅ Core | Real measurements, honest empty states |
 
 ## Architecture
 
 ```mermaid
-flowchart LR
-    subgraph Client[Frontend · React + TypeScript]
-        UI[Caption window<br/>Sessions · Dashboard]
-    end
-    subgraph Server[Backend · FastAPI]
-        API[REST + WebSocket API]
-        SVC[Services]
-        ENG[Engines<br/>VAD · Speech to text · Summary]
-        DB[(SQLite)]
-    end
-    subgraph HW[Processors]
-        NPU[Hexagon NPU]
-        GPU[GPU]
-        CPU[CPU]
-    end
-    UI <--> API
-    API --> SVC --> ENG
-    SVC --> DB
-    ENG -->|1st choice| NPU
-    ENG -->|fallback| GPU
-    ENG -->|fallback| CPU
+flowchart TD
+    A[Browser Mic] -->|WebSocket audio chunks| B[Backend WS /stream]
+    B --> C[VoiceActivityDetector]
+    C -->|Speech segments| D[SpeechRecognizer]
+    D -->|Transcript segments| E[Caption Window UI]
+    D -->|Persist| F[(transcript_segments)]
+    F --> G[Summarizer]
+    G -->|Key points, action items| H[(summaries)]
+    H --> I[Sessions Detail UI]
+    J[Benchmark Runner] -->|Same audio| K[Stage Runner per Provider]
+    K -->|Metrics| L[(benchmark_results)]
+    L --> M[Dashboard Charts]
 ```
 
-**Pipeline:** audio capture → voice activity detection → speech recognition → summarizer → captions and notes.
+### Provider Selection (Honest & Transparent)
 
-| Stage | Model direction | Runtime | Planned processor |
-|---|---|---|---|
-| Voice activity detection | Silero VAD | ONNX Runtime | CPU |
-| Speech recognition | Whisper family (Qualcomm AI Hub) | ONNX Runtime with QNN | NPU first |
-| Summarization | Small on-device LLM, or an extractive fallback | ONNX Runtime GenAI or Qualcomm Genie | NPU first |
-| Translation *(stretch)* | AI4Bharat IndicTrans2, distilled | ONNX Runtime | NPU where supported |
-
-**Fallback chain:** NPU → GPU → CPU. The app records which processor ran every stage, so it is always clear where the work happened. Stages such as voice detection and the interface run on the CPU by design.
-
-> Every model is checked against Qualcomm AI Hub and the target device before use. Models that do not compile or run are replaced or moved to the CPU, and this is documented openly.
-
-## NPU Advantage Dashboard
-
-The dashboard turns "the NPU helps" into measured results that anyone can repeat.
-
-| Measure | How it is measured | Compared across |
-|---|---|---|
-| Caption delay | Time from the end of a speech segment to the caption appearing, from in-app logs | NPU, CPU, GPU (if supported) |
-| Real-time factor | Processing time divided by audio length, on the same audio file | NPU, CPU, GPU (if supported) |
-| Processor use | Windows performance counters and the Task Manager NPU graph | NPU vs CPU load |
-| Battery drain | Discharge rate over a fixed run from the same starting charge, with the same brightness and background apps | NPU vs CPU-only |
-| Accuracy | Word error rate on a small English, Hindi and Hinglish test set | Per language |
-
-Goals: caption delay of about 2 seconds or less, lower power draw on the NPU than the CPU, and more battery life per hour than a CPU-only run. **These are goals until measured.** Results will be published here with the method and raw data.
+```mermaid
+flowchart TD
+    A[Request Stage] --> B{QNNExecutionProvider available?}
+    B -->|Yes| C[Use NPU via ONNX Runtime QNN]
+    B -->|No| D{GPU ExecutionProvider available?}
+    D -->|Yes| E[Use GPU via CUDA/DirectML]
+    D -->|No| F[Use CPU via ONNX Runtime CPU]
+    C --> G[Log provider, latency, simulated=false]
+    E --> G
+    F --> G
+    G --> H[Return result with provider metadata]
+```
 
 ## Tech Stack
 
-| Layer | Choice |
-|---|---|
-| Backend | Python 3.11+, FastAPI, SQLAlchemy 2, Alembic, Pydantic v2 |
-| Database | SQLite by default, PostgreSQL-ready through `DATABASE_URL` |
-| ML runtime | ONNX Runtime (QNN execution provider), Qualcomm AI Hub, ONNX Runtime GenAI |
-| Frontend | React 18, TypeScript, Vite, Tailwind CSS, React Query, Recharts |
-| Quality | Ruff, mypy, pytest, ESLint, Prettier, Vitest, pre-commit |
-| Delivery | Docker (CPU only), GitHub Actions CI, Windows ARM64 installer (planned) |
+| Layer | Technology |
+|-------|------------|
+| Backend | Python 3.11+, FastAPI, SQLAlchemy 2.x, Alembic, Pydantic v2 |
+| ML Runtime | ONNX Runtime (QNN, CUDA, DirectML, CPU) |
+| Models | Silero VAD, Whisper tiny (ONNX), Extractive summarizer |
+| Frontend | React 18, TypeScript, Vite, Tailwind CSS, TanStack Query, Recharts |
+| Database | SQLite (dev), PostgreSQL (prod) via SQLAlchemy |
+| Testing | pytest, Vitest, Testing Library |
+| CI/CD | GitHub Actions, Docker multi-stage builds |
 
 ## Project Structure
 
-Target layout. Folders appear as the baseline is built.
-
-```text
+```
 Hexacode/
-├── backend/          FastAPI app: api, services, repositories, db, engines, schemas
-├── frontend/         React + TypeScript app
-├── docs/             Proposal, architecture, API notes, Snapdragon setup
-├── scripts/          Model download, seed data, benchmark audio helpers
-├── .github/          CI workflows, issue and PR templates
-├── Makefile          setup, dev, test, lint, format, migrate, build
+├── backend/
+│   ├── app/
+│   │   ├── api/v1/           # FastAPI routers
+│   │   ├── core/             # Config, logging, errors, deps
+│   │   ├── db/               # SQLAlchemy models, session
+│   │   ├── engines/          # ML engine protocols & impls
+│   │   ├── repositories/     # Data access layer
+│   │   ├── schemas/          # Pydantic v2 schemas
+│   │   └── services/         # Business logic
+│   ├── tests/
+│   ├── alembic/
+│   ├── scripts/
+│   └── pyproject.toml
+├── frontend/
+│   ├── src/
+│   │   ├── api/              # Typed API client
+│   │   ├── components/       # Reusable UI components
+│   │   ├── hooks/            # Custom React hooks
+│   │   ├── pages/            # Page components
+│   │   └── styles/
+│   └── package.json
+├── docs/
+│   ├── architecture.md
+│   ├── api.md
+│   └── snapdragon-setup.md
+├── scripts/
+├── .github/workflows/
 ├── docker-compose.yml
+├── Makefile
 └── README.md
 ```
 
-## Getting Started
-
-> **Coming with the baseline.** The commands below are the target workflow and will work once the baseline is merged. Until then, see the [Project Status](#project-status) table.
+## Quick Start (5 Commands)
 
 ```bash
-git clone https://github.com/beckkenstschaft/Hexacode.git
+# 1. Clone and enter repo
+git clone https://github.com/your-org/Hexacode.git
 cd Hexacode
-make setup     # install backend and frontend dependencies
-make migrate   # create the database
-make dev       # start backend and frontend
+
+# 2. Run setup (installs deps, creates venv, runs migrations)
+make setup
+
+# 3. Start development servers
+make dev
+
+# 4. Open http://localhost:5173 in browser
+
+# 5. (Optional) Seed sample data
+make seed
 ```
 
-The app must run on any machine with no models downloaded. In that mode it uses clearly labelled **simulated** engines, and the interface shows a "Simulated" badge. Real models are downloaded with `scripts/download_models.py`.
+> **No models required** — runs in simulated mode by default with visible "Simulated" badges.
 
-## Running on a Snapdragon PC
+## Running on Snapdragon X Windows ARM64
 
-The NPU is only reachable from a **native Windows on ARM64** setup. Docker on other systems is CPU-only.
+> **📋 To verify on device** — NPU acceleration requires native Windows on ARM64 with Qualcomm Neural Processing SDK.
 
-Steps to be verified on an HP Snapdragon X-series PC:
+### Prerequisites
+- Snapdragon X Elite/Plus HP PC
+- Windows 11 24H2+ on ARM64
+- Qualcomm Neural Processing SDK installed
+- ONNX Runtime with QNNExecutionProvider
 
-1. Install an ARM64-native Python and Node.js.
-2. Install ONNX Runtime with the QNN execution provider.
-3. Compile and profile the models with Qualcomm AI Hub, then download them with the model script.
-4. Start the app and open the dashboard to confirm which processor each stage used.
+### Setup
+```bash
+# 1. Install Qualcomm Neural Processing SDK
+# Download from Qualcomm Developer Network
 
-Exact commands and tested hardware will be listed in `docs/snapdragon-setup.md` after on-device testing. The device model will be named there.
+# 2. Install ONNX Runtime with QNN
+pip install onnxruntime-qnn  # or build from source
 
-## Project Status
+# 3. Configure backend/.env
+USE_MOCK_ENGINES=false
+PREFERRED_PROVIDERS=QNNExecutionProvider,CUDAExecutionProvider,DmlExecutionProvider,CPUExecutionProvider
 
-| Area | Status |
-|---|---|
-| Project proposal | Done, see `docs/` |
-| Architecture plan | In progress |
-| Backend: API, database, engines | Planned |
-| Live captions (English, Hindi, Hinglish) | Planned |
-| Summaries and action items | Planned |
-| NPU Advantage Dashboard | Planned |
-| Frontend | Planned |
-| Tests and CI | Planned |
-| Windows ARM64 installer | Planned |
-| On-device Snapdragon benchmarks | Not started |
+# 4. Download/convert models for QNN
+python scripts/download_models.py
 
-This table is updated with every milestone.
+# 5. Run benchmark to verify NPU
+make dev
+# Open Dashboard → Run Benchmark → Check NPU results
+```
 
-## Roadmap
+See [docs/snapdragon-setup.md](docs/snapdragon-setup.md) for detailed instructions.
 
-| Phase | Goal |
-|---|---|
-| Days 1–3 | Set up the Snapdragon environment, run Whisper through AI Hub on the NPU, first profiling result |
-| Days 4–7 | Voice detection, chunked processing, Hindi and Hinglish testing, caption window |
-| Days 8–10 | Local summarizer |
-| Days 11–13 | Dashboard and benchmark data on NPU, CPU and GPU |
-| Days 14–16 | ARM64 installer, on-device tests, demo video |
-| After the core | Translation, meeting Q&A, read-aloud |
+## Configuration
 
-If time is short, stretch goals are cut first. The dashboard is never cut.
+All configuration via environment variables (see `backend/.env.example`):
 
-## Honesty Policy
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PRODUCT_NAME` | Sahayak | Product name (single source of truth) |
+| `ENVIRONMENT` | development | development\|testing\|production |
+| `DATABASE_URL` | sqlite+aiosqlite:///./data/sahayak.db | Database connection |
+| `USE_MOCK_ENGINES` | true | Use mock engines (no model downloads) |
+| `VAD_MODEL_PATH` | models/silero_vad.onnx | VAD model path |
+| `ASR_MODEL_PATH` | models/whisper_tiny.onnx | ASR model path |
+| `PREFERRED_PROVIDERS` | QNN,CUDA,DML,CPU | Provider priority order |
+| `CORS_ORIGINS` | localhost:5173 | Allowed CORS origins |
+| `LOG_LEVEL` | INFO | Logging level |
+| `LOG_FORMAT` | json | json\|console |
 
-- No benchmark number is hard-coded. Every figure shown comes from a stored measurement.
-- If the NPU or GPU is not available on a machine, the app says so and shows results only for processors that ran.
-- Output from demo engines is always marked as simulated.
-- Unverified steps are marked "to verify on device".
+## API Overview
 
-## Documentation
+See [docs/api.md](docs/api.md) for full OpenAPI reference.
 
-| File | Contents |
-|---|---|
-| `docs/proposal.docx` | Full project proposal |
-| `docs/architecture.md` | Architecture and design decisions *(planned)* |
-| `docs/api.md` | API reference *(planned)* |
-| `docs/snapdragon-setup.md` | Setup and results on a Snapdragon PC *(planned)* |
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/health` | GET | Health check |
+| `/ready` | GET | Readiness check |
+| `/system/capabilities` | GET | Available providers, models, simulated mode |
+| `/sessions` | POST | Create session |
+| `/sessions` | GET | List sessions (paginated) |
+| `/sessions/{id}` | GET | Get session with transcripts & summaries |
+| `/sessions/{id}/stream` | WS | Live caption WebSocket |
+| `/sessions/{id}/summary` | POST | Generate summary |
+| `/benchmarks` | POST | Run benchmark |
+| `/benchmarks` | GET | List benchmark runs |
+| `/benchmarks/{id}` | GET | Get benchmark with results |
+
+## Benchmark Methodology
+
+The NPU Advantage Dashboard runs **honest benchmarks** on the same audio across all available processors:
+
+### What We Measure
+1. **Latency (ms)** — Wall-clock time per stage (VAD, ASR, Summarization)
+2. **Real-Time Factor (RTF)** — `latency_ms / (audio_duration_s * 1000)`; < 1.0 = faster than real-time
+3. **CPU Utilization (%)** — Average CPU during inference via `psutil`
+4. **NPU Utilization (%)** — Estimated via QNN profiling (best effort)
+5. **Battery Delta (%)** — Battery drain during benchmark via `psutil.sensors_battery()` (best effort)
+
+### How It Works
+```python
+for provider in available_providers:
+    for stage in ["vad", "asr", "summarization"]:
+        cpu_before = psutil.cpu_percent()
+        battery_before = get_battery()
+
+        start = time.perf_counter()
+        result = engine.run(audio)
+        latency_ms = (time.perf_counter() - start) * 1000
+
+        cpu_after = psutil.cpu_percent()
+        battery_after = get_battery()
+
+        save_result(provider, stage, latency_ms, rtf, cpu, npu, battery_delta)
+```
+
+### Honesty Guarantees
+- ✅ Every number comes from a real measurement stored in the database
+- ✅ NPU/GPU only appear if actually available (`QNNExecutionProvider` detection)
+- ✅ Mock engine outputs flagged `simulated: true` in API + "Simulated" badge in UI
+- ✅ Empty states shown when processor unavailable
+- ✅ No hardcoded or fabricated numbers
+
+### Limitations
+- NPU % and battery Δ are best-effort estimates
+- Requires physical Snapdragon device for accurate NPU measurements
+- Thermal throttling affects sustained performance
+- Background processes affect CPU/battery readings
+
+## Testing
+
+```bash
+# Backend tests (with coverage)
+make test-backend
+
+# Frontend tests
+make test-frontend
+
+# All tests
+make test
+
+# Linting
+make lint
+
+# Format code
+make format
+```
+
+### Coverage Targets
+- Backend services: ≥80%
+- Frontend components: Main flows covered
+
+## Roadmap (Stretch Goals)
+
+- [ ] **Translation** — EN ↔ HI ↔ Hinglish via local models
+- [ ] **Meeting Q&A** — RAG over session transcripts
+- [ ] **Read-aloud (TTS)** — Offline neural TTS (Piper/VITS)
+- [ ] **Speaker diarization** — Distinguish speakers in meetings
+- [ ] **Export formats** — PDF, Markdown, SRT, VTT
+- [ ] **Mobile companion** — React Native app for remote viewing
+- [ ] **Plugin system** — Custom summarizers, formatters
 
 ## Contributing
 
-Suggestions and issues are welcome. Please open an issue before a large change. Code should follow the project's linting rules, include tests, and keep comments short and useful.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
-## Author
-
-**Syed Amaan Hasan**
-M.Tech AI/ML, BITS Pilani
+1. Fork the repo
+2. Create feature branch (`git checkout -b feat/amazing-feature`)
+3. Commit changes (Conventional Commits)
+4. Run tests and linters (`make test && make lint`)
+5. Open Pull Request
 
 ## License
 
-See the `LICENSE` file in this repository.
+MIT License — see [LICENSE](LICENSE) for details.
+
+## Acknowledgments
+
+- [Silero VAD](https://github.com/snakers4/silero-vad) — Voice activity detection
+- [Whisper](https://github.com/openai/whisper) — Speech recognition (ONNX conversion)
+- [ONNX Runtime](https://onnxruntime.ai/) — Cross-platform ML inference
+- [Qualcomm AI Hub](https://aihub.qualcomm.com/) — Model optimization for NPU
+- [Tailwind CSS](https://tailwindcss.com/) — Utility-first styling
+- [TanStack Query](https://tanstack.com/query) — Server state management
+- [Recharts](https://recharts.org/) — Composable charting
+
+---
+
+**Built for Snapdragon-powered HP PCs • Runs offline • Honest benchmarks**
