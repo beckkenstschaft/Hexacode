@@ -39,7 +39,7 @@ dev = [
     "pre-commit==3.8.0",
 ]
 genai = [
-    "onnxruntime-genai==0.4.0",
+    "onnxruntime-genai==0.17.0",
 ]
 
 [tool.ruff]
