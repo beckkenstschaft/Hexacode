@@ -1,4 +1,4 @@
-# Sahayak
+# HexaCode
 
 [![CI](https://github.com/your-org/Hexacode/workflows/CI/badge.svg)](https://github.com/your-org/Hexacode/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -16,7 +16,7 @@ Meetings and classrooms generate vast amounts of spoken content that's lost with
 
 ## Solution
 
-Sahayak runs entirely offline on your Snapdragon-powered HP PC:
+HexaCode runs entirely offline on your Snapdragon-powered HP PC:
 - **Live captions** in English, Hindi, and Hinglish via WebSocket streaming
 - **Local summarization** with key points and action items
 - **NPU Advantage Dashboard** — honest benchmarks comparing NPU, GPU, and CPU on the *same audio* with real measurements stored in a database
@@ -173,9 +173,9 @@ All configuration via environment variables (see `backend/.env.example`):
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `PRODUCT_NAME` | Sahayak | Product name (single source of truth) |
+| `PRODUCT_NAME` | HexaCode | Product name (single source of truth) |
 | `ENVIRONMENT` | development | development\|testing\|production |
-| `DATABASE_URL` | sqlite+aiosqlite:///./data/sahayak.db | Database connection |
+| `DATABASE_URL` | sqlite+aiosqlite:///./data/HexaCode.db | Database connection |
 | `USE_MOCK_ENGINES` | true | Use mock engines (no model downloads) |
 | `VAD_MODEL_PATH` | models/silero_vad.onnx | VAD model path |
 | `ASR_MODEL_PATH` | models/whisper_tiny.onnx | ASR model path |
