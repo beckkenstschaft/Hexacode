@@ -11,7 +11,7 @@ dependencies = [
     "alembic==1.13.1",
     "pydantic==2.9.2",
     "pydantic-settings==2.5.2",
-    "pydantic-extra-types==2.6.0",
+    "pydantic-extra-types==2.11.1",
     "python-dotenv==1.0.1",
     "structlog==24.1.0",
     "python-json-logger==2.0.7",
